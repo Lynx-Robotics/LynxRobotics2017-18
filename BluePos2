@@ -1,0 +1,172 @@
+package org.firstinspires.ftc.teamcode;
+
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.GyroSensor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.I2cAddr;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.vuforia.VuMarkTarget;
+import android.media.MediaPlayer;
+
+
+
+import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
+import org.firstinspires.ftc.robotcore.internal.android.dx.rop.code.Exceptions;
+
+/**
+ * Created by Student on 10/18/2016.
+ */
+@Autonomous(name="Blue Pos 2", group="Iterative Opmode")
+public class BluePos2 extends AutoSupport {
+
+    //BEFORE YOU CHANGE THIS CODE, TEST IT.  THEN THINK ABOUT WHETHER OR NOT YOUR CHANGE WILL BREAK THE CODE
+    //THEN DON'T CHANGE THE CODE
+    color myColor=color.blue;
+    @Override
+    public void runOpMode() throws InterruptedException {
+        //playMusic();
+        sleep(1000);
+        initialize();
+        waitForStart();
+       /* int step = 0;
+        int lastStep =-1;*/
+        int step=0;
+        int lastStep=-1;
+        RelicRecoveryVuMark V=RelicRecoveryVuMark.UNKNOWN;
+        float firstDist=0;
+        while (opModeIsActive()) {
+            //actual auto.
+            if(step==-100 && lastStep==-101) {
+                lastStep++;
+                float testDistance=50;
+                step+=driveForwardDist(testDistance);
+
+
+                // step+=KillJewels(color.blue);
+                //step+=turnLeft90Degrees();
+            }
+            if(step==-99 && lastStep==-100)
+            {
+                telemetry.addData("Step",-99);
+                telemetry.addData("Blue:",colorSensor.blue());
+                telemetry.addData("red:",colorSensor.red());
+
+                telemetry.update();
+            }
+
+            if(step==0&&lastStep==-1){
+                lastStep++;
+                step+=glyphLift();
+            }
+
+            if(step==1 && lastStep==0) {
+                lastStep+=1;
+                V = getImageType();  //vuforia
+            }
+
+            if(step==1 && V==RelicRecoveryVuMark.LEFT){
+                step++;
+                firstDist=5;
+            }
+            if(step==1 && V==RelicRecoveryVuMark.CENTER){
+                step++;
+                firstDist=10;
+            }
+            if(step==1 && V==RelicRecoveryVuMark.RIGHT){
+                step++;
+                firstDist=20;
+            }
+
+            if(step==2 && lastStep==1) {
+                lastStep+=1;
+                step+=  KillJewels(myColor);
+            };
+            if(step==3 && lastStep==2) {
+                lastStep+=1;
+                step+=  driveForwardDist(35);
+            };
+            if(step==4 && lastStep==3) {
+                lastStep+=1;
+                step+=  turnRight90Degrees();
+            };
+            if(step==5 && lastStep==4) {
+                lastStep++;
+                step+=driveForwardDist(firstDist);
+            }
+            if(step==6 && lastStep==5) {
+                lastStep++;
+                step+=turnLeft90Degrees();
+            }
+            if(step==7 && lastStep==6) {
+                lastStep++;
+                long initialTime=System.currentTimeMillis();
+                driveForwardPwr(.4f);
+                while(initialTime+1500>System.currentTimeMillis()){
+                    driveForwardPwr(.4f);
+                }
+                driveForwardPwr(0);
+                step++;
+
+            }
+            if(step==8 && lastStep==7) {
+                lastStep++;
+                step+=glyphRelease();
+            }
+            if(step==9 && lastStep==8){
+                lastStep++;
+                long initialTime=System.currentTimeMillis();
+                while(initialTime+500>System.currentTimeMillis()){
+                    driveBackwardsPwr(.3f);
+                }
+                driveForwardPwr(0);
+
+            }
+            /*if(step==1 && lastStep==0) {
+                lastStep+=1;
+                 step+= turnLeft90Degrees();// driveForwardDist(75);
+            }*/
+            /*if(step==1 && lastStep==0) {
+                sleep(2000);
+                lastStep+=1;
+
+                step++;
+            }
+            if(step==2 && lastStep==1) {
+                driveForwardDist(5000);
+            }*/
+
+            //driveForward(120);
+            //driveForward(150);
+            //driveForward(200);
+            //driveForward(250);
+
+        }
+    }
+
+
+
+    public void playMusic(){
+        Thread t = new Thread() {
+            public void run() {
+                MediaPlayer mp = new MediaPlayer();
+                try{
+                    //   mp = MediaPlayer.create(this, R.raw.aidiw);
+                    mp.start();
+                    telemetry.addData("Very Good","mp");
+                    telemetry.update();}
+                catch(Exception e){
+                    telemetry.addData("Error",e);
+                    telemetry.update();
+                }
+            }
+        };
+
+        t.start();
+    }
+}
