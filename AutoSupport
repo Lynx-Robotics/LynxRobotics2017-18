@@ -1,0 +1,659 @@
+package org.firstinspires.ftc.teamcode;
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cColorSensor;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cCompassSensor;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CompassSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+
+
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.GyroSensor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.I2cAddr;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
+
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.Func;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
+import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
+import org.firstinspires.ftc.robotcore.external.navigation.VuMarkInstanceId;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
+
+import java.sql.Time;
+
+/**
+ * Created by Student on 8/18/2017.
+ */
+public abstract class AutoSupport extends LinearOpMode {
+
+
+    public DcMotor L1   = null;
+    public DcMotor R1   = null;
+    public DcMotor L2   = null;
+    public DcMotor R2   = null;
+
+    public ModernRoboticsI2cColorSensor colorSensor   = null;
+    public ModernRoboticsI2cColorSensor colorSensor2   = null;
+
+    public ModernRoboticsI2cCompassSensor compassSensor   = null;
+    public GyroSensor gyroSensor=null;
+    public BNO055IMU imu;
+    DcMotor ArmElevation = null;
+    Servo gearShift=null;
+
+    Servo jewelDown=null;
+    Servo jewelKnock=null;
+    Servo jewelDown2=null;
+    Servo jewelKnock2=null;
+    OpenGLMatrix lastLocation = null;
+    Servo grabber3 = null;
+    Servo grabber4 = null;
+    /**
+     * {@link #vuforia} is the variable we will use to store our instance of the Vuforia
+     * localization engine.
+     */
+    static final double     CAL_TIME_SEC  = 20;
+    private ElapsedTime runtime = new ElapsedTime();
+
+    VuforiaLocalizer vuforia;
+    Orientation angles;
+    Acceleration gravity;
+
+
+    HardwareMap hwMap   = null;
+    public enum color{
+        blue,
+        red
+    };
+    public void setDirectionsDriveTrain(){
+        L1.setDirection(DcMotorSimple.Direction.FORWARD);
+        L2.setDirection(DcMotorSimple.Direction.FORWARD);
+        R1.setDirection(DcMotorSimple.Direction.REVERSE);
+        R2.setDirection(DcMotorSimple.Direction.REVERSE);
+    }
+    public int initialize() {
+
+        try {
+            hwMap = hardwareMap;
+            L1 = hwMap.dcMotor.get("L1");
+            L1.setPower(0);
+            R1 = hwMap.dcMotor.get("R1");
+            R1.setPower(0);
+            L2 = hwMap.dcMotor.get("L2");
+            L2.setPower(0);
+            R2 = hwMap.dcMotor.get("R2");
+            R2.setPower(0);
+            setDirectionsDriveTrain();
+            ArmElevation = hwMap.dcMotor.get("elev"); //elevation
+            ArmElevation.setDirection(DcMotorSimple.Direction.REVERSE);
+
+
+            gyroSensor = hwMap.get(ModernRoboticsI2cGyro.class, "gyro");
+
+            colorSensor = hwMap.get(ModernRoboticsI2cColorSensor.class, "color");
+            colorSensor2 = hwMap.get(ModernRoboticsI2cColorSensor.class, "color2");
+
+
+    /*
+    compassSensor = hwMap.get(ModernRoboticsI2cCompassSensor.class, "compass");
+    runtime.reset();
+    compassSensor.setMode(CompassSensor.CompassMode.CALIBRATION_MODE);
+    telemetry.addData("Calibrating", true);
+    telemetry.update();
+    while (opModeIsActive() && compassSensor.isCalibrating()) {
+        idle();
+    }
+    telemetry.addData("Calibrating", false);
+    telemetry.update();
+    compassSensor.setMode(CompassSensor.CompassMode.MEASUREMENT_MODE);
+
+
+    */
+            gearShift=hwMap.servo.get("gearShift");
+            gearShift.setPosition(.23);
+
+
+            grabber3=hwMap.servo.get("gg3");
+            grabber4=hwMap.servo.get("gg4");
+            grabber3.setPosition(1);
+            grabber4.setPosition(0);
+
+            jewelDown =hwMap.servo.get("jewelDrop");
+            jewelKnock=hwMap.servo.get("jewelKnock");
+            jewelDown2 =hwMap.servo.get("jewelDrop2");
+            jewelKnock2=hwMap.servo.get("jewelKnock2");
+            jewelDown.setPosition(1);
+            jewelDown2.setPosition(0);
+            jewelKnock.setPosition(0);
+            jewelKnock2.setPosition(0);
+            gyroSensor.calibrate();
+            telemetry.addData("Calibrating", true);
+            telemetry.update();
+            while (opModeIsActive() && gyroSensor.isCalibrating()) {
+                idle();
+            }
+            telemetry.addData("Calibrating", false);
+            telemetry.update();
+
+
+            //imu code
+            BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+            parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+            parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+            parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+            parameters.loggingEnabled = true;
+            parameters.loggingTag = "IMU";
+            parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+            // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+            // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+            // and named "imu".
+       /* imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+        imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+*/
+        }
+        catch (Exception e) {
+
+        }
+
+
+        return 1;
+    }
+
+    //Drivetrain code
+    @Deprecated
+    //PLEASE DONT FUCKING USE THIS
+    public int runDriveTrainMech(float forwardPower, float turningPower, float strafingPower) {
+        double powerForL1 = forwardPower + turningPower - strafingPower;
+        double powerForL2 = forwardPower + turningPower + strafingPower;
+        double powerForR1 = forwardPower - turningPower - strafingPower;
+        double powerForR2 = forwardPower - turningPower + strafingPower;
+
+        //TODO:  SHORTEN CODE--- LEAVE AS JOB FOR NEW CODERS
+        if (powerForL1 > 1 || powerForL2 > 1 | powerForR1 > 1 || powerForR2 > 1) {
+            double max = Math.max(Math.max(powerForL1, powerForL2), Math.max(powerForR1, powerForR2));
+            powerForL1 = powerForL1 / max;
+            powerForL2 = powerForL2 / max;
+            powerForR1 = powerForR1 / max;
+            powerForR2 = powerForR2 / max;
+
+        }
+        return 1;
+    }
+
+    public float getHeadingIMU() {
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        gravity = imu.getGravity();
+
+        return angles.firstAngle;
+    }
+    public float getRollIMU() {
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        gravity = imu.getGravity();
+
+        return angles.secondAngle;
+    }
+    public float getPitchIMU() {
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        gravity = imu.getGravity();
+
+        return angles.thirdAngle;
+    }
+    public float getHeadingCompass() {
+        return (float)compassSensor.getDirection();
+    }
+    public float getHeadingGyro() {
+        return (float)gyroSensor.getHeading();
+    }
+    //TODO: WRITE FUNCTIONS
+    public int driveForwardDist(float cmDist) {
+        resetEncoders();
+        double pwr = .3;
+        int L1Pos=L1.getCurrentPosition();
+        int L2Pos=L2.getCurrentPosition();
+        int R1Pos=R1.getCurrentPosition();
+        int R2Pos=R2.getCurrentPosition();
+        double encoderPerCm=21.95d;
+        while (opModeIsActive() && (L1Pos+L2Pos+R1Pos+R2Pos)/4<cmDist*encoderPerCm)
+        {
+            L1Pos=L1.getCurrentPosition();
+            L2Pos=L2.getCurrentPosition();
+            R1Pos=R1.getCurrentPosition();
+            R2Pos=R2.getCurrentPosition();
+
+            int currentLeftPosition=(L1Pos+L2Pos)/2;
+            int currentRightPosition=(R1Pos+R2Pos)/2;
+            int currentAvgPosition=(L1Pos+L2Pos+R1Pos+R2Pos)/4;
+
+            int currentLeftOffset=currentAvgPosition-currentLeftPosition;
+            int currentRightOffset=currentAvgPosition-currentRightPosition;
+
+            telemetry.addData("L1",L1Pos);
+            telemetry.addData("L2",L2Pos);
+            telemetry.addData("R1",R1Pos);
+            telemetry.addData("R2",R2Pos);
+            telemetry.update();
+            double Kp=.01;
+            double powerForL1 = pwr+Kp*currentLeftOffset;
+            double powerForL2 = pwr+Kp*currentLeftOffset;
+            double powerForR1 = pwr+Kp*currentRightOffset;
+            double powerForR2 = pwr+Kp*currentRightOffset;
+            L1.setPower(powerForL1);
+            L2.setPower(powerForL2);
+            R1.setPower(powerForR1);
+            R2.setPower(powerForR2);
+        }
+        pwr=0;
+        double powerForL1 = pwr;
+        double powerForL2 = pwr;
+        double powerForR1 = pwr;
+        double powerForR2 = pwr;
+        L1.setPower(powerForL1);
+        L2.setPower(powerForL2);
+        R1.setPower(powerForR1);
+        R2.setPower(powerForR2);
+        return 1;
+    }
+    public int driveForwardPwr(float pwr){
+
+        double powerForL1 = pwr;
+        double powerForL2 = pwr;
+        double powerForR1 = pwr;
+        double powerForR2 = pwr;
+        L1.setPower(powerForL1);
+        L2.setPower(powerForL2);
+        R1.setPower(powerForR1);
+        R2.setPower(powerForR2);
+        return 1;
+    }
+    public void runDriveTrain(double left, double right){
+        L1.setPower(left);
+        L2.setPower(left);
+        R1.setPower(right);
+        R2.setPower(right);
+
+    }
+
+
+    public int turnLeft90Degrees() {
+        runtime.reset();
+        //relax, I'm sure that 38 seconds is the appropriate
+        // amount of time to spend working on this function and the obviously odd code will be fine
+        //Also, it works for now. And you know what they say, "if it seems to be working
+        // but is also smoking, its fine"  So until it meets a miserable failure,  YAY
+
+        float initialDegrees = getHeadingGyro();
+        float target=(90-initialDegrees);
+        if(target<0){
+            target=360+target;
+        }
+        //well, at least this code is acceptable
+
+        float degrees = getHeadingGyro();
+
+
+        while(degrees<target-2.5||degrees>target+2.5){
+            runDriveTrain(-.4,.4);
+            degrees = getHeadingGyro();
+            telemetry.addData("degrees",gyroSensor.getHeading());
+            telemetry.addData("target",target);
+            telemetry.update();
+        }
+        runDriveTrain(0,0);
+        telemetry.addData("degrees",gyroSensor.getHeading());
+        telemetry.update();
+        return 1;
+    }
+
+
+    public int turnRight90Degrees() {
+        runtime.reset();
+        //relax, I'm sure that 38 seconds is the appropriate
+        // amount of time to spend working on this function and the obviously odd code will be fine
+        //Also, it works for now. And you know what they say, "if it seems to be working
+        // but is also smoking, its fine"  So until it meets a miserable failure,  YAY
+        float initialDegrees = getHeadingGyro();
+        float target=(initialDegrees-90);
+        if(target<0){
+            target=360+target;
+        }
+
+
+        //well, at least this code is acceptable
+        float degrees = getHeadingGyro();
+
+
+        while(degrees<target-2.5||degrees>target+2.5){
+            runDriveTrain(.4,-.4);
+            degrees = getHeadingGyro();
+            telemetry.addData("degrees",gyroSensor.getHeading());
+            telemetry.addData("target",target);
+            telemetry.update();
+        }
+        runDriveTrain(0,0);
+        telemetry.addData("degrees",gyroSensor.getHeading());
+        telemetry.update();
+        return 1;
+    }
+
+    public float getRelativeHeading (float current, float target) {
+        current %= 360;
+        target %= 360;
+
+        float diff = current-target;
+        if (diff > 180) {
+            diff = 360-diff;
+        }
+        return diff;
+    }
+
+    public int turnDegrees(float targetDegrees) {
+        runtime.reset();
+        gyroSensor.calibrate();
+
+        float currentDegrees = gyroSensor.getHeading();
+        while (opModeIsActive()){
+            telemetry.addData("Heading",getRelativeHeading(currentDegrees,targetDegrees));
+            telemetry.update();
+            resetEncoders();
+            L1.setPower(-1);
+            L2.setPower(-1);
+            R1.setPower(1);
+            R2.setPower(1);
+        }
+
+
+        L1.setPower(0);
+        L2.setPower(0);
+        R1.setPower(0);
+        R2.setPower(0);
+
+        return 1;
+    }
+
+    public int driveBackwardsDist(float cmDist) {
+        resetEncoders();
+        setDirectionsDriveTrain();
+        double pwr = .5;
+        int L1Pos=L1.getCurrentPosition();
+        int L2Pos=L2.getCurrentPosition();
+        int R1Pos=R1.getCurrentPosition();
+        int R2Pos=R2.getCurrentPosition();
+        double encoderPerCm=21.9;
+        while (opModeIsActive() && (L1Pos+L2Pos+R1Pos+R2Pos)/4<cmDist*encoderPerCm)
+        {
+            L1Pos=L1.getCurrentPosition();
+            L2Pos=L2.getCurrentPosition();
+            R1Pos=R1.getCurrentPosition();
+            R2Pos=R2.getCurrentPosition();
+
+            double powerForL1 = pwr;
+            double powerForL2 = pwr;
+            double powerForR1 = pwr;
+            double powerForR2 = pwr;
+            L1.setPower(powerForL1);
+            L2.setPower(powerForL2);
+            R1.setPower(powerForR1);
+            R2.setPower(powerForR2);
+        }
+        setDirectionsDriveTrain();
+        return 1;
+    }
+    public int driveBackwardsPwr(float pwr) {
+        double powerForL1 = -pwr;
+        double powerForL2 = -pwr;
+        double powerForR1 = -pwr;
+        double powerForR2 = -pwr;
+        L1.setPower(powerForL1);
+        L2.setPower(powerForL2);
+        R1.setPower(powerForR1);
+        R2.setPower(powerForR2);
+        return 1;
+    }
+
+
+    //MORE FUNCTIONS GO HERE.  BUILD DOCUMENTATION
+    protected void resetEncoders(){
+        L1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        L2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        R1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        R2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        L1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        L2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        R1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        R2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+
+
+    int KillJewels(color myColor){
+        //extend servos; sense colors;  kill correct color
+
+        if(myColor==color.blue){
+            jewelDown.setPosition(.55);
+            //down for center
+            long initialTime=System.currentTimeMillis();
+            while(initialTime+1000>System.currentTimeMillis()) {
+                jewelDown.setPosition(.55);
+            }
+            initialTime=System.currentTimeMillis();
+
+            //center
+            jewelKnock.setPosition(.5f);
+            while(initialTime+1000>System.currentTimeMillis()) {
+                jewelKnock.setPosition(.5f);
+            }
+            initialTime=System.currentTimeMillis();
+
+            //down all the way
+            jewelDown.setPosition(.25);
+            while(initialTime+1000>System.currentTimeMillis()) {
+                jewelDown.setPosition(.25);
+            }
+            color currentColor=null;
+            while(currentColor==null && opModeIsActive()) {
+                if (colorSensor.blue() > 1 ){
+                    currentColor=color.blue;
+                }
+                else if ( colorSensor.red()>1){
+                    currentColor=color.red;
+                }
+            }
+
+            float placeToGo=.5f;
+            if(currentColor==color.blue){
+                placeToGo=1;
+            }
+            else if(currentColor==color.red){
+                placeToGo=-1;
+            }
+
+            initialTime=System.currentTimeMillis();
+            jewelKnock.setPosition(placeToGo);
+            while(initialTime+2000>System.currentTimeMillis()) {
+                jewelKnock.setPosition(placeToGo);
+            }
+            jewelDown.setPosition(1);
+            return 1;
+
+
+        }
+
+
+
+        else if(myColor==color.red){
+            jewelDown2.setPosition(.45);
+            //down for center
+            long initialTime=System.currentTimeMillis();
+            while(initialTime+1000>System.currentTimeMillis()) {
+                jewelDown2.setPosition(.45);
+            }
+            initialTime=System.currentTimeMillis();
+
+            //center
+            jewelKnock2.setPosition(.5);
+            while(initialTime+1000>System.currentTimeMillis()) {
+                jewelKnock2.setPosition(.5);
+            }
+            initialTime=System.currentTimeMillis();
+
+            //down all the way
+            jewelDown2.setPosition(.75);
+            while(initialTime+1000>System.currentTimeMillis()) {
+                jewelDown2.setPosition(.75);
+            }
+            color currentColor=null;
+            while(currentColor==null && opModeIsActive()) {
+                if (colorSensor2.blue() > 1 ){
+                    currentColor=color.blue;
+                }
+                else if ( colorSensor2.red()>1){
+                    currentColor=color.red;
+                }
+            }
+
+            float placeToGo=.5f;
+            if(currentColor==color.blue){
+                placeToGo=-1;
+            }
+            else if(currentColor==color.red){
+                placeToGo=1;
+            }
+
+            initialTime=System.currentTimeMillis();
+            jewelKnock2.setPosition(placeToGo);
+            while(initialTime+2000>System.currentTimeMillis()) {
+                jewelKnock2.setPosition(placeToGo);
+            }
+            jewelDown2.setPosition(0);
+            return 1;
+
+
+        }
+        return 0;//no color detected
+    }
+
+    public int glyphLift(){
+        grabber3.setPosition(.3);
+        grabber4.setPosition(.3);
+        long initialTime=System.currentTimeMillis();
+        while(initialTime+1000>System.currentTimeMillis()) {
+            grabber3.setPosition(.3);
+            grabber4.setPosition(.7);        }
+        initialTime=System.currentTimeMillis();
+        while(initialTime+500>System.currentTimeMillis()) {
+            ArmElevation.setPower(1);
+        }
+        ArmElevation.setPower(0);
+        return 1;
+    }
+    public int glyphRelease(){
+        grabber3.setPosition(1);
+        grabber4.setPosition(1);
+        long initialTime=System.currentTimeMillis();
+        while(initialTime+2000>System.currentTimeMillis()) {
+            grabber3.setPosition(1);
+            grabber4.setPosition(0);        }
+        return 1;
+    }
+
+
+
+    RelicRecoveryVuMark getImageType(){
+
+        /*
+         * To start up Vuforia, tell it the view that we wish to use for camera monitor (on the RC phone);
+         * If no camera monitor is desired, use the parameterless constructor instead (commented out below).
+         */
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
+
+        // OR...  Do Not Activate the Camera Monitor View, to save power
+        // VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
+        parameters.vuforiaLicenseKey = "AcHmdOf/////AAAAGfgUOovIGk5zn2WjNh/R/zsfKUVKT2pI6EzZPCm3izYFaXmsEcA0rrCB8NfRW4usnh8uiqWI6KrctoP99/rS1wXmwCBUKchW5HjEtXb40tf+/P6pfnDznBIFNyKOsfEGqCLwVRq3XtUUoBbPupqgdjUlALlawBWwSeyAszTrNdCqH19zuPL5x2eWqw+hY8K9XPycLWhapIKHeACCJbl67VyZzM0bAKmAEsFVsaEfZyHwTlNRvo3piaQK3mFc20pNf+Ynvxm189fiVrWlteWb50v8EuTOOaUgA/QIOf9Z+Qh/+RV4Dk47D8z8taTSJF0jsGSVhEj91soeg2z9gLhVzYAtkz2MIeQkDpKGhyAo2Wfd\n";
+
+        /*
+         * We also indicate which camera on the RC that we wish to use.
+         * Here we chose the back (HiRes) camera (for greater range), but
+         * for a competition robot, the front camera might be more convenient.
+         */
+        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
+        this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
+
+        /**
+         * Load the data set containing the VuMarks for Relic Recovery. There's only one trackable
+         * in this data set: all three of the VuMarks in the game were created from this one template,
+         * but differ in their instance id information.
+         * @see VuMarkInstanceId
+         */
+        VuforiaTrackables relicTrackables = this.vuforia.loadTrackablesFromAsset("RelicVuMark");
+        VuforiaTrackable relicTemplate = relicTrackables.get(0);
+        relicTemplate.setName("relicVuMarkTemplate"); // can help in debugging; otherwise not necessary
+
+
+
+        relicTrackables.activate();
+
+        /**
+         * See if any of the instances of {@link relicTemplate} are currently visible.
+         * {@link RelicRecoveryVuMark} is an enum which can have the following values:
+         * UNKNOWN, LEFT, CENTER, and RIGHT. When a VuMark is visible, something other than
+         * UNKNOWN will be returned by {@link RelicRecoveryVuMark#from(VuforiaTrackable)}.
+         */
+        RelicRecoveryVuMark vuMark = RelicRecoveryVuMark.from(relicTemplate);
+        while(vuMark == RelicRecoveryVuMark.UNKNOWN ) {
+            vuMark = RelicRecoveryVuMark.from(relicTemplate);
+            telemetry.addData("isUnknown",true);
+
+            telemetry.update();
+
+                /* Found an instance of the template. In the actual game, you will probably
+                 * loop until this condition occurs, then move on to act accordingly depending
+                 * on which VuMark was visible. */
+            telemetry.addData("VuMark", "%s visible", vuMark);
+        }
+        telemetry.addData("isCenter",vuMark==RelicRecoveryVuMark.CENTER);
+        telemetry.addData("isRight",vuMark==RelicRecoveryVuMark.RIGHT);
+        telemetry.addData("isLeft",vuMark==RelicRecoveryVuMark.LEFT);
+        telemetry.update();
+
+        return vuMark;
+    }
+
+
+}
